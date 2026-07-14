@@ -36,36 +36,73 @@
 
     <!-- 실제 홈 콘텐츠 섹션 -->
     <section ref="mainContentRef" class="main-content-section">
-      <h2 class="section-title">물로켓 TOP 3</h2>
+      <div class="section-header">
+        <h2 class="section-title">물로켓 TOP 3</h2>
+        <p class="section-subtitle">기대보다 실망한 관광지를 먼저 확인해보세요.</p>
+      </div>
+
       <div class="card-grid">
-        <Card v-for="item in rocketTop3" :key="item.name" class="top-card">
+        <Card v-for="item in rocketTop3" :key="item.name" class="rank-card">
           <template #title>
-            {{ item.rank }}위 {{ item.name }}
+            <div class="card-title-row">
+              <span class="rank-badge">{{ item.rank }}위</span>
+              <span class="card-title-text">{{ item.name }}</span>
+            </div>
           </template>
+
           <template #content>
-            <p class="card-text">
-              물로켓 지수
-              <Tag :value="`${item.score}점`" severity="danger" />
-            </p>
+            <div class="card-body">
+              <p class="card-description">{{ item.description }}</p>
+              <div class="card-meta">
+                <Tag :value="`${item.score}점`" severity="danger" />
+                <span class="meta-text">물로켓 지수</span>
+              </div>
+            </div>
           </template>
         </Card>
       </div>
 
-      <h2 class="section-title">명소 TOP 3</h2>
+      <div class="section-header">
+        <h2 class="section-title">명소 TOP 3</h2>
+        <p class="section-subtitle">다른 이용자들이 많이 찾은 인기 관광지예요.</p>
+      </div>
+
       <div class="card-grid">
-        <Card v-for="item in placeTop3" :key="item.name" class="top-card">
-          <template #title>{{ item.rank }}위 {{ item.name }}</template>
+        <Card v-for="item in placeTop3" :key="item.name" class="rank-card">
+          <template #title>
+            <div class="card-title-row">
+              <span class="rank-badge place">{{ item.rank }}위</span>
+              <span class="card-title-text">{{ item.name }}</span>
+            </div>
+          </template>
+
           <template #content>
-            <p class="card-text">사용자 만족도 기반 인기 명소</p>
+            <div class="card-body">
+              <p class="card-description">{{ item.description }}</p>
+              <div class="card-meta">
+                <Tag value="인기" severity="info" />
+                <span class="meta-text">명소 추천</span>
+              </div>
+            </div>
           </template>
         </Card>
       </div>
 
-      <h2 class="section-title">최근 게시글</h2>
-      <Card class="post-list-card">
+      <div class="section-header">
+        <h2 class="section-title">최근 게시글</h2>
+        <p class="section-subtitle">커뮤니티에서 방금 올라온 여행 이야기를 확인해보세요.</p>
+      </div>
+
+      <Card class="post-card">
         <template #content>
           <div class="post-list">
-            <p v-for="post in recentPosts" :key="post.id">{{ post.title }}</p>
+            <article v-for="post in recentPosts" :key="post.id" class="post-item">
+              <div class="post-item__top">
+                <h3 class="post-item__title">{{ post.title }}</h3>
+                <Tag :value="post.category" severity="secondary" />
+              </div>
+              <p class="post-item__summary">{{ post.summary }}</p>
+            </article>
           </div>
         </template>
       </Card>
@@ -89,23 +126,65 @@ const scrollToMainContent = () => {
 
 // 물로켓 TOP3 임시 데이터
 const rocketTop3 = [
-  { name: 'A 관광지', score: 82, rank: 1 },
-  { name: 'B 관광지', score: 74, rank: 2 },
-  { name: 'C 관광지', score: 69, rank: 3 },
+  {
+    rank: 1,
+    name: 'A 관광지',
+    score: 82,
+    description: '후기 수는 많지만 기대 대비 만족도가 낮게 나타난 관광지예요.',
+  },
+  {
+    rank: 2,
+    name: 'B 관광지',
+    score: 74,
+    description: '사진과 실제 체감 차이가 큰 편으로 집계된 장소예요.',
+  },
+  {
+    rank: 3,
+    name: 'C 관광지',
+    score: 69,
+    description: '재방문 의향이 낮아 물로켓 지수가 높게 나온 후보예요.',
+  },
 ]
 
 // 명소 TOP3 임시 데이터
 const placeTop3 = [
-  { name: '광주호 호수생태원', rank: 1 },
-  { name: '담양 메타세쿼이아길', rank: 2 },
-  { name: '여수 오동도', rank: 3 },
+  {
+    rank: 1,
+    name: '광주호 호수생태원',
+    description: '자연 풍경과 산책 만족도가 고르게 높은 명소예요.',
+  },
+  {
+    rank: 2,
+    name: '담양 메타세쿼이아길',
+    description: '사진 명소로도 유명하고 계절감이 잘 살아나는 곳이에요.',
+  },
+  {
+    rank: 3,
+    name: '여수 오동도',
+    description: '바다 풍경과 동선이 좋아 커뮤니티 반응이 꾸준한 편이에요.',
+  },
 ]
 
 // 최근 게시글 임시 데이터
 const recentPosts = [
-  { id: 1, title: '주말에 다녀온 광주 맛집 후기' },
-  { id: 2, title: '담양 당일치기 코스 공유합니다' },
-  { id: 3, title: '여수 야경 스팟 추천' },
+  {
+    id: 1,
+    title: '주말에 다녀온 광주 맛집 후기',
+    category: '후기',
+    summary: '가성비와 분위기를 함께 본 솔직한 방문 기록이에요.',
+  },
+  {
+    id: 2,
+    title: '담양 당일치기 코스 공유합니다',
+    category: '코스',
+    summary: '대중교통 기준으로 움직이기 좋은 일정으로 정리했어요.',
+  },
+  {
+    id: 3,
+    title: '여수 야경 스팟 추천',
+    category: '추천',
+    summary: '야경을 보기 좋은 동선과 시간대를 정리한 글이에요.',
+  },
 ]
 </script>
 
@@ -180,7 +259,7 @@ const recentPosts = [
   letter-spacing: -0.03em;
 }
 
-/* 로켓 이미지 간격 */
+/* 로켓 이미지 */
 .landing-visual {
   margin: 18px 0 10px;
   display: flex;
@@ -208,7 +287,7 @@ const recentPosts = [
   color: #1f6feb;
 }
 
-/* CTA 버튼: Toss 느낌의 선명한 덩어리감 */
+/* CTA 버튼 */
 .cta-button {
   margin-top: 18px;
   width: fit-content;
@@ -235,11 +314,22 @@ const recentPosts = [
   padding: 48px 0 72px;
 }
 
+.section-header {
+  margin-bottom: 16px;
+}
+
 .section-title {
-  margin: 0 0 16px;
+  margin: 0 0 6px;
   font-size: 1.6rem;
   font-weight: 800;
   color: #111827;
+}
+
+.section-subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.98rem;
+  line-height: 1.5;
 }
 
 .card-grid {
@@ -249,57 +339,116 @@ const recentPosts = [
   margin-bottom: 34px;
 }
 
-.info-card {
-  background: #ffffff;
+.rank-card {
+  border-radius: 18px;
   border: 1px solid #dbeafe;
-  border-radius: 16px;
-  padding: 18px 16px;
-  font-weight: 600;
-  min-height: 82px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(31, 111, 235, 0.06);
 }
 
-.list-box {
-  background: #ffffff;
-  border: 1px solid #dbeafe;
-  border-radius: 16px;
-  padding: 16px;
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.list-box p {
-  margin: 0;
-  padding: 10px 0;
-  border-bottom: 1px solid #eef2ff;
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1f6feb;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
-.list-box p:last-child {
-  border-bottom: 0;
+.rank-badge.place {
+  background: #e0f2fe;
+  color: #0284c7;
 }
 
-.top-card {
-  border-radius: 16px;
-  border: 1px solid #dbeafe;
+.card-title-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
 }
 
-.card-text {
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-description {
   margin: 0;
   color: #374151;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.card-meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.post-list-card {
-  border-radius: 16px;
+.meta-text {
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.post-card {
+  border-radius: 18px;
   border: 1px solid #dbeafe;
+  box-shadow: 0 8px 18px rgba(31, 111, 235, 0.06);
 }
 
-.post-list p {
-  margin: 0;
-  padding: 10px 0;
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.post-item {
+  padding: 14px 0;
   border-bottom: 1px solid #eef2ff;
 }
 
-.post-list p:last-child {
+.post-item:last-child {
   border-bottom: 0;
+}
+
+.post-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.post-item__title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.post-item__summary {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

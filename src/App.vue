@@ -7,12 +7,9 @@
     </main>
 
     <!-- 공통 챗봇 플로팅 버튼 -->
-    <Button
-      class="chatbot-fab"
-      label="챗봇"
-      icon="pi pi-comments"
-      @click="openChatbot"
-    />
+    <Button class="chatbot-fab" @click="openChatbot" aria-label="챗봇 열기">
+      <img src="/images/chatbot-icon.png" alt="챗봇 아이콘" class="chatbot-icon" />
+    </Button>
 
     <!-- 챗봇 패널 -->
     <Dialog
@@ -134,8 +131,21 @@ const sendMessage = async () => {
   right: 24px;
   bottom: 24px;
   z-index: 1200;
-  border-radius: 999px;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   box-shadow: 0 10px 24px rgba(31, 111, 235, 0.25);
+  overflow: hidden;
+}
+
+.chatbot-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .chatbot-body {
