@@ -6,7 +6,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../views/HomeViews.vue'),
+      component: () => import('../views/HomeView.vue'),
     },
     {
       path: '/posts',
@@ -16,7 +16,7 @@ const router = createRouter({
     {
       path: '/posts/new',
       name: 'post-create',
-      component: () => import('../views/PostFormatView.vue'),
+      component: () => import('../views/PostFormView.vue'),
     },
     {
       path: '/posts/:id',
@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/posts/:id/edit',
       name: 'post-edit',
-      component: () => import('../views/PostFormatView.vue'),
+      component: () => import('../views/PostFormView.vue'),
       props: true,
     },
     {
