@@ -19,12 +19,21 @@
 </script>
 
 <style scoped>
+/* 물로켓 콘셉트 파란 계열 토큰 */
 .app-header {
+  --color-primary: #1f6feb;
+  --color-primary-hover: #1558b0;
+  --color-secondary: #8ec5ff;
+  --color-surface: #ffffff;
+  --color-border: #dbeafe;
+  --color-text-main: #111827;
+  --color-text-sub: #6b7280;
+
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: #ffffff;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .app-header__inner {
@@ -38,9 +47,10 @@
 }
 
 .app-header__logo {
-  color: #2d6a4f;
-  font-size: 1.25rem;
+  color: var(--color-primary);
+  font-size: 1.3rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
   text-decoration: none;
 }
 
@@ -51,12 +61,17 @@
 }
 
 .app-header__link {
-  color: #495057;
+  color: var(--color-text-sub);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.app-header__link:hover {
+  color: var(--color-primary-hover);
 }
 
 .app-header__link.router-link-active {
-  color: #2d6a4f;
+  color: var(--color-primary);
 }
 </style>
