@@ -1,6 +1,6 @@
 <template>
   <div class="post-detail-page">
-    <section class="detail-header">
+    <section v-if="post" class="detail-header">
       <div>
         <p class="page-kicker">Post Detail</p>
         <h1 class="page-title">{{ post.title }}</h1>
@@ -26,7 +26,7 @@
       </div>
     </section>
 
-    <Card class="detail-card">
+    <Card v-if="post" class="detail-card">
       <template #content>
         <div class="detail-meta">
           <Tag :value="post.category" severity="info" />
@@ -40,6 +40,12 @@
             {{ post.content }}
           </p>
         </div>
+      </template>
+    </Card>
+
+    <Card v-else class="detail-card">
+      <template #content>
+        <p class="empty-message">게시글이 없습니다.</p>
       </template>
     </Card>
 
@@ -72,56 +78,67 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 
+const route = useRoute()
 const router = useRouter()
 
-// 임시 상세 데이터
-const post = ref({
-  id: 1,
-  title: '주말에 다녀온 광주 맛집 후기',
-  region: '광주',
-  category: '후기',
-  author: '민지',
-  views: 124,
-  comments: 8,
-  createdAt: '2026-07-15',
-  content:
-    '이번 주말에 다녀온 광주 맛집 후기입니다. 분위기, 가격, 맛을 기준으로 솔직하게 정리했어요. 실제 방문해보니 기대했던 부분과 달랐던 점도 있어서 함께 남겨봅니다.',
+const posts = [
+  {
+    id: 1,
+    title: '주말에 다녀온 광주 맛집 후기',
+    region: '광주',
+    category: '후기',
+    author: '민지',
+    views: 124,
+    comments: 8,
+    createdAt: '2026-07-15',
+    content:
+      '이번 주말에 다녀온 광주 맛집 후기입니다. 분위기, 가격, 맛을 기준으로 솔직하게 정리했어요. 실제 방문해보니 기대했던 부분과 달랐던 점도 있어서 함께 남겨봅니다.',
+  },
+  {
+    id: 2,
+    title: '담양 당일치기 코스 공유합니다',
+    region: '전남',
+    category: '코스',
+    author: '준호',
+    views: 98,
+    comments: 5,
+    createdAt: '2026-07-14',
+    content:
+      '대중교통 기준으로 움직이기 좋은 담양 당일치기 코스를 정리한 글입니다. 처음 가는 분도 따라가기 쉽게 구성했어요.',
+  },
+]
+
+const post = computed(() => {
+  const id = Number(route.params.id)
+  return posts.find((item) => item.id === id) ?? null
 })
 
-// 비밀번호 모달 상태
 const isPasswordDialogOpen = ref(false)
 const password = ref('')
 
-// 비밀번호 입력창 열기
 const openPasswordDialog = () => {
   isPasswordDialogOpen.value = true
 }
 
-// 비밀번호 입력창 닫기
 const closePasswordDialog = () => {
   isPasswordDialogOpen.value = false
   password.value = ''
 }
 
-// 비밀번호 검증 임시 동작
 const verifyPassword = () => {
   if (!password.value.trim()) return
-
-  // 실제로는 백엔드 검증으로 교체 예정
-  router.push(`/posts/${post.value.id}/edit`)
+  router.push(`/posts/${route.params.id}/edit`)
 }
 
-// 삭제 임시 동작
 const confirmDelete = () => {
-  // 실제로는 확인 모달 + API 삭제로 교체 예정
   alert('삭제 기능은 다음 단계에서 연결할 예정입니다.')
 }
 </script>
@@ -198,6 +215,11 @@ const confirmDelete = () => {
 
 .detail-body p {
   margin: 0;
+}
+
+.empty-message {
+  margin: 0;
+  color: #6b7280;
 }
 
 .password-dialog {
