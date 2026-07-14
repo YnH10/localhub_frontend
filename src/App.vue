@@ -7,21 +7,55 @@
     </main>
 
     <!-- 공통 챗봇 플로팅 버튼 -->
-    <Button class="chatbot-fab" label="챗봇" @click="goChatbot" />
+    <Button class="chatbot-fab" label="챗봇" icon="pi pi-comments" @click="openChatbot" />
+
+    <!-- 챗봇 패널 (임시 UI) -->
+    <Dialog
+      v-model:visible="isChatbotOpen"
+      header="LocalHub 챗봇"
+      modal
+      :style="{ width: '420px' }"
+      class="chatbot-dialog"
+    >
+      <div class="chatbot-body">
+        <div class="chatbot-messages">
+          <div class="msg bot">안녕하세요. 지역 관광 정보를 도와드릴게요.</div>
+          <div class="msg bot">예: 광주 당일치기 코스 추천해줘</div>
+        </div>
+
+        <div class="chatbot-input-row">
+          <InputText
+            v-model="draftMessage"
+            placeholder="메시지를 입력하세요"
+            class="chatbot-input"
+            @keydown.enter="sendMessage"
+          />
+          <Button label="전송" @click="sendMessage" />
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
 import AppHeader from './components/AppHeader.vue'
 
-const router = useRouter()
+const isChatbotOpen = ref(false)
+const draftMessage = ref('')
 
-// 챗봇 페이지가 준비되면 해당 경로로 이동
-const goChatbot = () => {
-  // 임시로 게시판으로 이동시켜 동작 확인
-  router.push('/posts')
+// 챗봇 패널 열기
+const openChatbot = () => {
+  isChatbotOpen.value = true
+}
+
+// 임시 전송 동작 (다음 단계에서 API 연결)
+const sendMessage = () => {
+  if (!draftMessage.value.trim()) return
+  draftMessage.value = ''
 }
 </script>
 
@@ -37,7 +71,6 @@ const goChatbot = () => {
   padding: 24px 20px 40px;
 }
 
-/* 우측 하단 고정 플로팅 버튼 */
 .chatbot-fab {
   position: fixed;
   right: 24px;
@@ -45,5 +78,41 @@ const goChatbot = () => {
   z-index: 1200;
   border-radius: 999px;
   box-shadow: 0 10px 24px rgba(31, 111, 235, 0.25);
+}
+
+.chatbot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chatbot-messages {
+  height: 260px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.msg {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.msg.bot {
+  background: #e8f1ff;
+  color: #1e3a8a;
+}
+
+.chatbot-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chatbot-input {
+  flex: 1;
 }
 </style>
