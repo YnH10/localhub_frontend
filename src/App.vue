@@ -7,42 +7,64 @@
     </main>
 
     <!-- 공통 챗봇 플로팅 버튼 -->
-    <Button class="chatbot-fab" @click="openChatbot" aria-label="챗봇 열기">
+    <button class="chatbot-fab" type="button" aria-label="챗봇 열기" @click="openChatbot">
       <img src="/images/chatbot-icon.png" alt="챗봇 아이콘" class="chatbot-icon" />
-    </Button>
+    </button>
 
-    <!-- 챗봇 패널 -->
+    <!-- 챗봇 다이얼로그 -->
     <Dialog
       v-model:visible="isChatbotOpen"
-      header="LocalHub 챗봇"
       modal
-      :style="{ width: '420px', maxWidth: '92vw' }"
-      class="chatbot-dialog"
+      :dismissableMask="true"
+      :draggable="false"
+      :style="{ width: '520px', maxWidth: '94vw' }"
+      :pt="{
+        root: { class: 'chatbot-dialog-root' },
+        mask: { class: 'chatbot-dialog-mask' },
+      }"
     >
-      <div class="chatbot-body">
-        <div ref="messageBoxRef" class="chatbot-messages">
-          <div
-            v-for="message in chatMessages"
-            :key="message.id"
-            class="message-row"
-            :class="message.role"
-          >
-            <div class="message-bubble">
-              {{ message.text }}
+      <template #container>
+        <div class="chatbot-panel">
+          <div class="chatbot-panel__header">
+            <div>
+              <p class="chatbot-kicker">LocalHub AI</p>
+              <h2 class="chatbot-title">챗봇</h2>
+            </div>
+
+            <Button
+              icon="pi pi-times"
+              text
+              rounded
+              class="chatbot-close"
+              aria-label="챗봇 닫기"
+              @click="closeChatbot"
+            />
+          </div>
+
+          <div ref="messageBoxRef" class="chatbot-messages">
+            <div
+              v-for="message in chatMessages"
+              :key="message.id"
+              class="message-row"
+              :class="message.role"
+            >
+              <div class="message-bubble">
+                {{ message.text }}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="chatbot-input-row">
-          <InputText
-            v-model="draftMessage"
-            placeholder="메시지를 입력하세요"
-            class="chatbot-input"
-            @keydown.enter="sendMessage"
-          />
-          <Button label="전송" @click="sendMessage" />
+          <div class="chatbot-panel__footer">
+            <InputText
+              v-model="draftMessage"
+              placeholder="메시지를 입력하세요"
+              class="chatbot-input"
+              @keydown.enter="sendMessage"
+            />
+            <Button label="전송" class="chatbot-send" @click="sendMessage" />
+          </div>
         </div>
-      </div>
+      </template>
     </Dialog>
   </div>
 </template>
@@ -78,7 +100,12 @@ const openChatbot = async () => {
   scrollToBottom()
 }
 
-// 메시지 영역 맨 아래로 스크롤
+// 챗봇 패널 닫기
+const closeChatbot = () => {
+  isChatbotOpen.value = false
+}
+
+// 메시지 영역 맨 아래로 이동
 const scrollToBottom = () => {
   if (!messageBoxRef.value) return
   messageBoxRef.value.scrollTop = messageBoxRef.value.scrollHeight
@@ -100,7 +127,6 @@ const sendMessage = async () => {
   await nextTick()
   scrollToBottom()
 
-  // 다음 단계에서 FastAPI API 연결
   setTimeout(async () => {
     chatMessages.value.push({
       id: Date.now() + 1,
@@ -131,14 +157,15 @@ const sendMessage = async () => {
   right: 24px;
   bottom: 24px;
   z-index: 1200;
-  width: 64px;
-  height: 64px;
+  width: 66px;
+  height: 66px;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: transparent;
+  background: #ffffff;
   box-shadow: 0 10px 24px rgba(31, 111, 235, 0.25);
   overflow: hidden;
+  cursor: pointer;
 }
 
 .chatbot-icon {
@@ -148,24 +175,68 @@ const sendMessage = async () => {
   display: block;
 }
 
-.chatbot-body {
+/* 다이얼로그 바깥 배경 */
+:global(.chatbot-dialog-mask) {
+  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* PrimeVue Dialog 기본 패딩 제거 */
+:global(.chatbot-dialog-root .p-dialog-content) {
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.chatbot-panel {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-height: 560px;
+  background: #ffffff;
+}
+
+.chatbot-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #e5eefc;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.chatbot-kicker {
+  margin: 0 0 4px;
+  color: #1f6feb;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chatbot-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.chatbot-close {
+  color: #6b7280;
 }
 
 .chatbot-messages {
-  height: 320px;
+  flex: 1;
   overflow-y: auto;
-  padding: 12px;
-  border: 1px solid #dbeafe;
-  border-radius: 12px;
+  padding: 18px 20px;
   background: #f8fbff;
 }
 
 .message-row {
   display: flex;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .message-row.bot {
@@ -177,11 +248,11 @@ const sendMessage = async () => {
 }
 
 .message-bubble {
-  max-width: 80%;
-  padding: 10px 12px;
+  max-width: 82%;
+  padding: 11px 13px;
   border-radius: 14px;
   font-size: 0.95rem;
-  line-height: 1.45;
+  line-height: 1.5;
   word-break: keep-all;
 }
 
@@ -197,12 +268,21 @@ const sendMessage = async () => {
   border-bottom-right-radius: 4px;
 }
 
-.chatbot-input-row {
+.chatbot-panel__footer {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  align-items: center;
+  padding: 16px 20px 20px;
+  border-top: 1px solid #e5eefc;
+  background: #ffffff;
 }
 
 .chatbot-input {
   flex: 1;
+}
+
+.chatbot-send {
+  background: #1f6feb;
+  border-color: #1f6feb;
 }
 </style>
