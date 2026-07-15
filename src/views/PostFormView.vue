@@ -27,38 +27,12 @@
             </div>
 
             <div class="field">
-              <label for="region">지역</label>
-              <Dropdown
-                id="region"
-                v-model="form.region"
-                :options="regionOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="지역 선택"
-                class="input"
-              />
-            </div>
-
-            <div class="field">
-              <label for="category">카테고리</label>
-              <Dropdown
-                id="category"
-                v-model="form.category"
-                :options="categoryOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="카테고리 선택"
-                class="input"
-              />
-            </div>
-
-            <div class="field">
               <label for="password">비밀번호</label>
               <Password
                 id="password"
                 v-model="form.password"
                 toggleMask
-                feedback="false"
+                :feedback="false"
                 placeholder="수정/삭제용 비밀번호"
                 class="input"
               />
@@ -78,12 +52,7 @@
           </div>
 
           <div class="button-group">
-            <Button
-              type="button"
-              label="취소"
-              outlined
-              @click="goBack"
-            />
+            <Button type="button" label="취소" outlined @click="goBack" />
             <Button
               type="submit"
               :label="isEditMode ? '수정 완료' : '작성 완료'"
@@ -101,7 +70,6 @@ import { computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Textarea from 'primevue/textarea'
@@ -109,49 +77,25 @@ import Textarea from 'primevue/textarea'
 const route = useRoute()
 const router = useRouter()
 
-// 수정 모드인지 확인
 const isEditMode = computed(() => route.path.includes('/edit'))
 
-// 지역 옵션
-const regionOptions = [
-  { label: '광주', value: '광주' },
-  { label: '전남', value: '전남' },
-  { label: '전북', value: '전북' },
-]
-
-// 카테고리 옵션
-const categoryOptions = [
-  { label: '후기', value: '후기' },
-  { label: '코스', value: '코스' },
-  { label: '추천', value: '추천' },
-]
-
-// 임시 폼 데이터
 const form = reactive({
   title: '',
-  region: null,
-  category: null,
   password: '',
   content: '',
 })
 
-// 수정 모드일 때 기존 값 미리 채우기
 watch(
   isEditMode,
   (mode) => {
     if (!mode) {
       form.title = ''
-      form.region = null
-      form.category = null
       form.password = ''
       form.content = ''
       return
     }
 
-    // 실제로는 route.params.id로 상세 API를 불러와서 채움
     form.title = '주말에 다녀온 광주 맛집 후기'
-    form.region = '광주'
-    form.category = '후기'
     form.password = ''
     form.content =
       '이번 주말에 다녀온 광주 맛집 후기입니다. 분위기, 가격, 맛을 기준으로 솔직하게 정리했어요.'
@@ -159,9 +103,7 @@ watch(
   { immediate: true },
 )
 
-// 폼 제출
 const handleSubmit = () => {
-  // 실제로는 axios로 POST / PUT 요청 연결 예정
   if (isEditMode.value) {
     router.push(`/posts/${route.params.id}`)
     return
@@ -170,7 +112,6 @@ const handleSubmit = () => {
   router.push('/posts')
 }
 
-// 취소
 const goBack = () => {
   if (isEditMode.value) {
     router.push(`/posts/${route.params.id}`)
