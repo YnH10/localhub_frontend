@@ -2,7 +2,11 @@
   <header class="app-header">
     <div class="app-header__inner">
       <RouterLink to="/" class="app-header__logo">
-        LocalHub
+        <img
+          src="/images/localhub-logo.png"
+          alt="LocalHub"
+          class="app-header__logo-image"
+        />
       </RouterLink>
 
       <nav class="app-header__nav" aria-label="주요 메뉴">
@@ -15,11 +19,7 @@
   </header>
 </template>
 
-<script setup>
-</script>
-
 <style scoped>
-/* 물로켓 콘셉트 파란 계열 토큰 */
 .app-header {
   --color-primary: #1f6feb;
   --color-primary-hover: #1558b0;
@@ -47,11 +47,15 @@
 }
 
 .app-header__logo {
-  color: var(--color-primary);
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
+}
+
+.app-header__logo-image {
+  height: 52px;
+  width: auto;
+  display: block;
 }
 
 .app-header__nav {
