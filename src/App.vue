@@ -6,13 +6,18 @@
       <router-view />
     </main>
 
-    <!-- 공통 챗봇 플로팅 버튼 -->
-    <button class="chatbot-fab" type="button" aria-label="챗봇 열기" @click="openChatbot">
+    <button
+      v-if="showChatbot"
+      class="chatbot-fab"
+      type="button"
+      aria-label="챗봇 열기"
+      @click="openChatbot"
+    >
       <img src="/images/chatbot-icon.png" alt="챗봇 아이콘" class="chatbot-icon" />
     </button>
 
-    <!-- 챗봇 다이얼로그 -->
     <Dialog
+      v-if="showChatbot"
       v-model:visible="isChatbotOpen"
       modal
       :dismissableMask="true"
@@ -70,11 +75,15 @@
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import AppHeader from './components/AppHeader.vue'
+
+const route = useRoute()
+const showChatbot = computed(() => route.name === 'home')
 
 const isChatbotOpen = ref(false)
 const draftMessage = ref('')
@@ -93,50 +102,97 @@ const chatMessages = ref([
   },
 ])
 
-// 챗봇 패널 열기
 const openChatbot = async () => {
   isChatbotOpen.value = true
   await nextTick()
   scrollToBottom()
 }
 
-// 챗봇 패널 닫기
 const closeChatbot = () => {
   isChatbotOpen.value = false
 }
 
-// 메시지 영역 맨 아래로 이동
 const scrollToBottom = () => {
   if (!messageBoxRef.value) return
+  // smooth scroll not necessary; keep simple
   messageBoxRef.value.scrollTop = messageBoxRef.value.scrollHeight
 }
 
-// 임시 전송 동작
 const sendMessage = async () => {
   const text = draftMessage.value.trim()
   if (!text) return
 
+  // push user message
+  const userId = Date.now()
   chatMessages.value.push({
-    id: Date.now(),
+    id: userId,
     role: 'user',
     text,
   })
 
   draftMessage.value = ''
-
   await nextTick()
   scrollToBottom()
 
-  setTimeout(async () => {
+  // placeholder bot message
+  const placeholderId = Date.now() + 1
+  chatMessages.value.push({
+    id: placeholderId,
+    role: 'bot',
+    text: '응답 중...',
+  })
+  await nextTick()
+  scrollToBottom()
+
+  try {
+    const endpoint = (import.meta.env.VITE_CHATBOT_API_URL || '/api/chat').replace(/\/$/, '')
+
+    // build history from current messages
+    const history = chatMessages.value.map((m) => ({
+      role: m.role === 'bot' ? 'assistant' : 'user',
+      content: m.text,
+    }))
+
+    const body = {
+      message: text,
+      history,
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    const data = await res.json()
+
+    // remove placeholder
+    const phIndex = chatMessages.value.findIndex((m) => m.id === placeholderId)
+    if (phIndex !== -1) chatMessages.value.splice(phIndex, 1)
+
+    const answerText = (data && (data.answer || data.reply || data.message)) || '응답이 없습니다.'
     chatMessages.value.push({
-      id: Date.now() + 1,
+      id: Date.now() + 2,
       role: 'bot',
-      text: '임시 응답입니다. 다음 단계에서 실제 API를 연결할게요.',
+      text: answerText,
     })
 
     await nextTick()
     scrollToBottom()
-  }, 300)
+  } catch (err) {
+    console.error('chatbot error', err)
+    // remove placeholder
+    const phIndex = chatMessages.value.findIndex((m) => m.id === placeholderId)
+    if (phIndex !== -1) chatMessages.value.splice(phIndex, 1)
+
+    chatMessages.value.push({
+      id: Date.now() + 3,
+      role: 'bot',
+      text: '응답에 실패했습니다.',
+    })
+    await nextTick()
+    scrollToBottom()
+  }
 }
 </script>
 
@@ -175,13 +231,11 @@ const sendMessage = async () => {
   display: block;
 }
 
-/* 다이얼로그 바깥 배경 */
 :global(.chatbot-dialog-mask) {
   backdrop-filter: blur(6px);
   background: rgba(15, 23, 42, 0.45) !important;
 }
 
-/* PrimeVue Dialog 기본 패딩 제거 */
 :global(.chatbot-dialog-root .p-dialog-content) {
   padding: 0;
   border-radius: 20px;

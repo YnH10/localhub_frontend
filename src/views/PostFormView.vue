@@ -15,49 +15,47 @@
     <Card class="form-card">
       <template #content>
         <form class="post-form" @submit.prevent="handleSubmit">
-          <div class="form-grid">
-            <div class="field">
-              <label for="title">제목</label>
-              <InputText
-                id="title"
-                v-model="form.title"
-                placeholder="게시글 제목을 입력하세요"
-                class="input"
-              />
+          <div class="form-table">
+            <div class="form-row">
+              <div class="form-label-cell">
+                <label for="title">제목</label>
+              </div>
+              <div class="form-input-cell">
+                <InputText id="title" v-model="form.title" placeholder="게시글 제목을 입력하세요" class="input" />
+              </div>
             </div>
 
-            <div class="field">
-              <label for="password">비밀번호</label>
-              <Password
-                id="password"
-                v-model="form.password"
-                toggleMask
-                :feedback="false"
-                placeholder="수정/삭제용 비밀번호"
-                class="input"
-              />
+            <div class="form-row">
+              <div class="form-label-cell">
+                <label for="password">비밀번호</label>
+              </div>
+              <div class="form-input-cell">
+                <InputText id="password" v-model="form.password" type="password" placeholder="숫자만 입력" class="input" @input="sanitizePassword" />
+              </div>
             </div>
-          </div>
 
-          <div class="field">
-            <label for="content">내용</label>
-            <Textarea
-              id="content"
-              v-model="form.content"
-              rows="10"
-              autoResize
-              placeholder="게시글 내용을 입력하세요"
-              class="input"
-            />
+            <div class="form-row">
+              <div class="form-label-cell">
+                <label for="category">지역/카테고리</label>
+              </div>
+              <div class="form-input-cell">
+                <InputText id="category" v-model="form.category" placeholder="예: 후기, 코스, 추천 (선택)" class="input" />
+              </div>
+            </div>
+
+            <div class="form-row form-row--content">
+              <div class="form-label-cell">
+                <label for="content">내용</label>
+              </div>
+              <div class="form-input-cell">
+                <Textarea id="content" v-model="form.content" rows="10" autoResize placeholder="게시글 내용을 입력하세요" class="input textarea" />
+              </div>
+            </div>
           </div>
 
           <div class="button-group">
             <Button type="button" label="취소" outlined @click="goBack" />
-            <Button
-              type="submit"
-              :label="isEditMode ? '수정 완료' : '작성 완료'"
-              icon="pi pi-check"
-            />
+            <Button type="submit" :label="isEditMode ? '수정 완료' : '작성 완료'" icon="pi pi-check" />
           </div>
         </form>
       </template>
@@ -66,135 +64,80 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
-import Password from 'primevue/password'
 import Textarea from 'primevue/textarea'
+import { createPost, fetchPost, updatePost } from '@/services/posts'
 
 const route = useRoute()
 const router = useRouter()
 
 const isEditMode = computed(() => route.path.includes('/edit'))
 
-const form = reactive({
+const form = ref({
   title: '',
   password: '',
   content: '',
+  category: '',
 })
 
-watch(
-  isEditMode,
-  (mode) => {
-    if (!mode) {
-      form.title = ''
-      form.password = ''
-      form.content = ''
-      return
-    }
+const loadForEdit = async () => {
+  if (!isEditMode.value) return
+  try {
+    const data = await fetchPost(route.params.id)
+    form.value.title = data.title || ''
+    form.value.content = data.content || ''
+    form.value.category = data.category || ''
+    // password는 빈 상태로 둡니다 (사용자가 입력해야 함)
+    form.value.password = ''
+  } catch (err) {
+    console.error(err)
+    alert('게시글을 불러오지 못했습니다.')
+    router.push('/posts')
+  }
+}
 
-    form.title = '주말에 다녀온 광주 맛집 후기'
-    form.password = ''
-    form.content =
-      '이번 주말에 다녀온 광주 맛집 후기입니다. 분위기, 가격, 맛을 기준으로 솔직하게 정리했어요.'
-  },
-  { immediate: true },
-)
+onMounted(loadForEdit)
+watch(isEditMode, loadForEdit)
 
-const handleSubmit = () => {
-  if (isEditMode.value) {
-    router.push(`/posts/${route.params.id}`)
+const sanitizePassword = () => {
+  form.value.password = (form.value.password || '').replace(/[^0-9]/g, '')
+}
+
+const handleSubmit = async () => {
+  if (!form.value.title.trim() || !form.value.content.trim()) {
+    alert('제목과 내용을 입력하세요.')
     return
   }
-
-  router.push('/posts')
+  try {
+    if (isEditMode.value) {
+      await updatePost(route.params.id, form.value)
+      router.push(`/posts/${route.params.id}`)
+    } else {
+      const created = await createPost(form.value)
+      // backend가 id를 반환한다고 가정
+      const newId = created.id ?? created.post?.id
+      if (newId) router.push(`/posts/${newId}`)
+      else router.push('/posts')
+    }
+  } catch (err) {
+    console.error(err)
+    alert(err.response?.data?.detail || '요청에 실패했습니다. 비밀번호를 확인하세요.')
+  }
 }
 
 const goBack = () => {
   if (isEditMode.value) {
     router.push(`/posts/${route.params.id}`)
-    return
+  } else {
+    router.push('/posts')
   }
-
-  router.push('/posts')
 }
 </script>
 
 <style scoped>
-.post-form-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-kicker {
-  margin: 0 0 6px;
-  color: #1f6feb;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(2rem, 3vw, 2.8rem);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: #111827;
-}
-
-.page-subtitle {
-  margin: 8px 0 0;
-  color: #6b7280;
-  line-height: 1.5;
-}
-
-.form-card {
-  border-radius: 18px;
-  border: 1px solid #dbeafe;
-  box-shadow: 0 8px 18px rgba(31, 111, 235, 0.06);
-}
-
-.post-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field label {
-  font-weight: 800;
-  color: #111827;
-}
-
-.input {
-  width: 100%;
-}
-
-.button-group {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 900px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
+/* 기존 스타일 재사용 */
 </style>

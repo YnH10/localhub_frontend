@@ -1,14 +1,16 @@
 <template>
   <div class="rocket-dashboard-page">
-    <section class="page-header">
-      <div>
-        <p class="page-kicker">Rocket Index</p>
-        <h1 class="page-title">물로켓 지수 대시보드</h1>
-        <p class="page-subtitle">
-          기대와 실제 만족도의 차이를 바탕으로 관광지별 과대평가 지수를 보여줘요.
-        </p>
-      </div>
-    </section>
+    <RouterLink to="/tourists" class="page-header-link">
+      <section class="page-header">
+        <div>
+          <p class="page-kicker">Rocket Index</p>
+          <h1 class="page-title">물로켓 지수 대시보드</h1>
+          <p class="page-subtitle">
+            기대와 실제 만족도의 차이를 바탕으로 관광지별 과대평가 지수를 보여줘요.
+          </p>
+        </div>
+      </section>
+    </RouterLink>
 
     <section class="summary-grid">
       <Card class="summary-card">
@@ -27,7 +29,7 @@
 
       <Card class="summary-card">
         <template #content>
-          <p class="summary-label">후기 3개 이상 관광지</p>
+          <p class="summary-label">평가가 등록된 관광지</p>
           <h2 class="summary-value">{{ summary.validPlaces }}</h2>
         </template>
       </Card>
@@ -44,13 +46,18 @@
 
         <template #content>
           <div class="ranking-list">
-            <article v-for="place in rocketRanking" :key="place.id" class="ranking-item">
+            <article
+              v-for="place in rocketRanking"
+              :key="place.id"
+              class="ranking-item"
+              @click="goTouristDetail(place.id)"
+            >
               <div class="ranking-item__left">
                 <span class="rank-badge">{{ place.rank }}위</span>
                 <div>
                   <h3 class="place-name">{{ place.name }}</h3>
                   <p class="place-meta">
-                    기대도 {{ place.expectation }} · 만족도 {{ place.satisfaction }}
+                    관광 전 {{ place.expectation }}점 · 관광 후 {{ place.satisfaction }}점
                   </p>
                 </div>
               </div>
@@ -84,6 +91,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Bar } from 'vue-chartjs'
 import {
   BarElement,
@@ -96,66 +104,59 @@ import {
 } from 'chart.js'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
+import { getTouristPlaceById, touristPlaces } from '@/assets/data/touristPlaces'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
-// 임시 요약 데이터
-const summary = {
-  totalPlaces: 12,
-  averageScore: 68,
-  validPlaces: 9,
-}
+const router = useRouter()
 
-// 임시 랭킹 데이터
-const rocketRanking = [
-  {
-    id: 1,
-    rank: 1,
-    name: 'A 관광지',
-    score: 82,
-    expectation: 4.5,
-    satisfaction: 2.1,
-    reviewCount: 18,
-  },
-  {
-    id: 2,
-    rank: 2,
-    name: 'B 관광지',
-    score: 74,
-    expectation: 4.2,
-    satisfaction: 2.4,
-    reviewCount: 15,
-  },
-  {
-    id: 3,
-    rank: 3,
-    name: 'C 관광지',
-    score: 69,
-    expectation: 4.0,
-    satisfaction: 2.6,
-    reviewCount: 12,
-  },
-  {
-    id: 4,
-    rank: 4,
-    name: '담양 메타세쿼이아길',
-    score: 58,
-    expectation: 4.6,
-    satisfaction: 3.2,
-    reviewCount: 11,
-  },
-  {
-    id: 5,
-    rank: 5,
-    name: '여수 오동도',
-    score: 45,
-    expectation: 4.4,
-    satisfaction: 3.5,
-    reviewCount: 10,
-  },
+const reviewStats = [
+  { id: '126385', expectation: 4.6, satisfaction: 2.2, reviewCount: 18 },
+  { id: '127065', expectation: 4.3, satisfaction: 2.5, reviewCount: 15 },
+  { id: '742332', expectation: 4.1, satisfaction: 2.7, reviewCount: 12 },
+  { id: '1622203', expectation: 4.7, satisfaction: 3.2, reviewCount: 11 },
+  { id: '2565865', expectation: 4.5, satisfaction: 3.4, reviewCount: 10 },
 ]
 
-// 차트 데이터
+const enrichedRanking = reviewStats
+  .map((item) => {
+    const place = getTouristPlaceById(item.id)
+
+    if (!place) return null
+
+    return {
+      ...place,
+      ...item,
+      score: Number((item.expectation - item.satisfaction).toFixed(1)),
+    }
+  })
+  .filter(Boolean)
+  .sort((left, right) => right.score - left.score)
+
+const rocketRanking = enrichedRanking.map((item, index) => ({
+  ...item,
+  rank: index + 1,
+}))
+
+const summary = computed(() => {
+  const totalPlaces = touristPlaces.length
+
+  const averageScore =
+    rocketRanking.length > 0
+      ? (
+          rocketRanking.reduce((sum, item) => sum + item.score, 0) / rocketRanking.length
+        ).toFixed(1)
+      : '0.0'
+
+  const validPlaces = rocketRanking.length
+
+  return {
+    totalPlaces,
+    averageScore,
+    validPlaces,
+  }
+})
+
 const chartData = computed(() => ({
   labels: rocketRanking.map((place) => place.name),
   datasets: [
@@ -168,7 +169,6 @@ const chartData = computed(() => ({
   ],
 }))
 
-// 차트 옵션
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -185,9 +185,9 @@ const chartOptions = {
   scales: {
     y: {
       beginAtZero: true,
-      max: 100,
+      max: 5,
       ticks: {
-        stepSize: 20,
+        stepSize: 1,
       },
       grid: {
         color: '#e5eefc',
@@ -201,11 +201,14 @@ const chartOptions = {
   },
 }
 
-// 점수에 따른 태그 색상
 const getSeverity = (score) => {
-  if (score >= 70) return 'danger'
-  if (score >= 40) return 'warning'
+  if (score >= 2.0) return 'danger'
+  if (score >= 1.0) return 'warning'
   return 'success'
+}
+
+const goTouristDetail = (placeId) => {
+  router.push(`/tourists/${placeId}`)
 }
 </script>
 
@@ -214,6 +217,12 @@ const getSeverity = (score) => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.page-header-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
 .page-kicker {
@@ -296,6 +305,12 @@ const getSeverity = (score) => {
   gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid #eef2ff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.ranking-item:hover {
+  transform: translateY(-1px);
 }
 
 .ranking-item:last-child {

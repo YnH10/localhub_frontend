@@ -9,6 +9,17 @@ const router = createRouter({
       component: () => import('../views/HomeView.vue'),
     },
     {
+      path: '/tourists',
+      name: 'tourist-list',
+      component: () => import('../views/TouristListView.vue'),
+    },
+    {
+      path: '/tourists/:id',
+      name: 'tourist-detail',
+      component: () => import('../views/TouristDetailView.vue'),
+      props: true,
+    },
+    {
       path: '/posts',
       name: 'post-list',
       component: () => import('../views/PostListView.vue'),
