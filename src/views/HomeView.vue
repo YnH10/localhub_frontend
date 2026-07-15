@@ -44,7 +44,7 @@
           v-for="item in rocketTop3"
           :key="item.id"
           class="rank-card"
-          @click="goTouristDetail(item.id)"
+          @click="goTouristDetail(item.id, item.raw)"
         >
           <template #header>
             <img
@@ -67,7 +67,7 @@
                 {{ item.address || '주소 정보 없음' }}
               </p>
               <div class="card-meta">
-                <Tag :value="`${item.score}점`" severity="danger" />
+                <Tag :value="item.score ? `${item.score}점` : '—'" severity="danger" />
                 <span class="meta-text">물로켓 지수</span>
               </div>
             </div>
@@ -87,7 +87,7 @@
           v-for="item in placeTop3"
           :key="item.id"
           class="rank-card"
-          @click="goTouristDetail(item.id)"
+          @click="goTouristDetail(item.id, item.raw)"
         >
           <template #header>
             <img
@@ -109,7 +109,6 @@
               <p class="card-description">
                 {{ item.address || '주소 정보 없음' }}
               </p>
-              <!-- 카테고리/태그 제거: 이전에는 "인기" Tag와 메타 텍스트가 있었습니다 -->
             </div>
           </template>
         </Card>
@@ -136,7 +135,6 @@
             >
               <div class="post-item__top">
                 <h3 class="post-item__title">{{ post.title }}</h3>
-                <!-- 카테고리 표시 제거 (후기/코스/추천 등) -->
               </div>
               <p class="post-item__summary">{{ post.summary }}</p>
             </article>
@@ -148,62 +146,131 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
+
+// 폴백용 로컬 데이터
 import { getTopTouristPlaces } from '@/assets/data/touristPlaces'
+
+// 백엔드 서비스
+import {
+  fetchWaterRocketExtremes,
+  fetchLocations,
+  resolveLocationIdByContentId,
+  resolveLocationByLocalItem,
+} from '@/services/locations'
 
 const router = useRouter()
 const fallbackImage = '/images/placeholder-place.jpg'
 
 const mainContentRef = ref(null)
-
 const scrollToMainContent = () => {
   if (!mainContentRef.value) return
   mainContentRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const baseTouristPlaces = computed(() => getTopTouristPlaces(6))
+const rocketTop3 = ref([])
+const placeTop3 = ref([])
+const loadingRocket = ref(false)
+const loadingPlace = ref(false)
 
-const rocketTop3 = computed(() => {
-  return baseTouristPlaces.value.slice(0, 3).map((place, index) => ({
-    ...place,
-    rank: index + 1,
-    score: [82, 74, 69][index] ?? 60,
-  }))
-})
+const mapLocationItemToCard = (item, idx, includeScore = false) => {
+  const raw = item.raw ?? item
+  return {
+    id: item.backendId ?? item.id ?? item.location_id ?? item.content_id ?? item.contentid ?? (raw && (raw.contentid ?? raw.content_id)) ?? null,
+    name: item.title ?? item.name ?? raw.title ?? '이름 없음',
+    mainImage: item.firstimage ?? item.mainImage ?? raw.firstimage ?? '',
+    thumbnailImage: item.firstimage2 ?? item.firstimage ?? item.thumbnailImage ?? raw.firstimage2 ?? '',
+    address: item.addr1 ?? item.address ?? raw.addr1 ?? '',
+    score: includeScore ? (item.water_rocket_index ?? raw.water_rocket_index ?? null) : undefined,
+    rank: idx + 1,
+    raw: raw,
+  }
+}
 
-const placeTop3 = computed(() => {
-  return baseTouristPlaces.value.slice(3, 6).map((place, index) => ({
-    ...place,
-    rank: index + 1,
-  }))
+const loadRocketTop = async () => {
+  loadingRocket.value = true
+  try {
+    const data = await fetchWaterRocketExtremes(3)
+    const highest = data?.highest ?? []
+    rocketTop3.value = (highest || []).slice(0, 3).map((it, idx) => mapLocationItemToCard(it, idx, true))
+    if (!rocketTop3.value.length) {
+      const local = getTopTouristPlaces(6)
+      rocketTop3.value = local.slice(0, 3).map((p, i) => mapLocationItemToCard(p, i, true))
+    }
+  } catch (err) {
+    console.error('loadRocketTop error', err)
+    const local = getTopTouristPlaces(6)
+    rocketTop3.value = local.slice(0, 3).map((p, i) => mapLocationItemToCard(p, i, true))
+  } finally {
+    loadingRocket.value = false
+  }
+}
+
+const loadPlaceTop = async () => {
+  loadingPlace.value = true
+  try {
+    const listData = await fetchLocations({ size: 3, page: 1 })
+    console.debug('[HomeView] fetchLocations listData=', listData)
+
+    // 안전 검사: items가 배열인지 확인
+    let items = listData?.items ?? listData?.data ?? []
+    if (!Array.isArray(items)) {
+      console.debug('[HomeView] warning: items is not an array, using []', items)
+      items = []
+    }
+
+    placeTop3.value = items.map((it, idx) => mapLocationItemToCard(it, idx, false))
+
+    if (!placeTop3.value.length) {
+      const local = getTopTouristPlaces(6)
+      placeTop3.value = local.slice(3, 6).map((p, i) => ({ ...p, rank: i + 1 }))
+    }
+  } catch (err) {
+    console.error('loadPlaceTop error', err)
+    const local = getTopTouristPlaces(6)
+    placeTop3.value = local.slice(3, 6).map((p, i) => ({ ...p, rank: i + 1 }))
+  } finally {
+    loadingPlace.value = false
+  }
+}
+
+const loadHome = async () => {
+  await Promise.all([loadRocketTop(), loadPlaceTop()])
+}
+
+onMounted(() => {
+  loadHome()
 })
 
 const recentPosts = [
-  {
-    id: 1,
-    title: '주말에 다녀온 광주 맛집 후기',
-    category: '후기',
-    summary: '가성비와 분위기를 함께 본 솔직한 방문 기록이에요.',
-  },
-  {
-    id: 2,
-    title: '담양 당일치기 코스 공유합니다',
-    category: '코스',
-    summary: '대중교통 기준으로 움직이기 좋은 일정으로 정리했어요.',
-  },
-  {
-    id: 3,
-    title: '여수 야경 스팟 추천',
-    category: '추천',
-    summary: '야경을 보기 좋은 동선과 시간대를 정리한 글이에요.',
-  },
+  { id: 1, title: '주말에 다녀온 광주 맛집 후기', summary: '가성비와 분위기를 함께 본 솔직한 방문 기록이에요.' },
+  { id: 2, title: '담양 당일치기 코스 공유합니다', summary: '대중교통 기준으로 움직이기 좋은 일정으로 정리했어요.' },
+  { id: 3, title: '여수 야경 스팟 추천', summary: '야경을 보기 좋은 동선과 시간대를 정리한 글이에요.' },
 ]
 
-const goTouristDetail = (placeId) => {
-  router.push(`/tourists/${placeId}`)
+const goTouristDetail = async (placeId, localRaw) => {
+  let target = placeId
+  const numeric = Number(placeId)
+  if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+    target = numeric
+  } else if (localRaw && localRaw.backendId) {
+    target = localRaw.backendId
+  } else {
+    try {
+      const resolved = await resolveLocationByLocalItem(localRaw)
+      if (resolved) target = resolved
+      else {
+        const byContent = await resolveLocationIdByContentId(placeId)
+        if (byContent) target = byContent
+      }
+    } catch (e) {
+      console.debug('goTouristDetail resolve error', e?.message ?? e)
+    }
+  }
+  router.push(`/tourists/${target}`)
 }
 
 const goPostDetail = (postId) => {
@@ -384,6 +451,34 @@ const goPostDetail = (postId) => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 12px 16px;
+}
+
+.card-title-text {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.card-body {
+  padding: 12px 16px 18px;
+}
+
+.card-description {
+  margin: 0 0 8px;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-text {
+  color: #6b7280;
+  font-size: 0.85rem;
 }
 
 .rank-badge {
@@ -399,96 +494,61 @@ const goPostDetail = (postId) => {
   font-weight: 800;
 }
 
-.rank-badge.place {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-
-.card-title-text {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #111827;
-}
-
-.card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.card-description {
-  margin: 0;
-  color: #374151;
-  line-height: 1.55;
-  word-break: keep-all;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.meta-text {
-  color: #6b7280;
-  font-size: 0.92rem;
-}
-
+/* Posts */
 .post-card {
-  border-radius: 18px;
-  border: 1px solid #dbeafe;
-  box-shadow: 0 8px 18px rgba(31, 111, 235, 0.06);
+  margin-top: 12px;
 }
 
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .post-item {
-  padding: 14px 0;
-  border-bottom: 1px solid #eef2ff;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #eef2ff;
   cursor: pointer;
+  transition: background-color 0.12s ease, transform 0.12s ease;
 }
 
-.post-item:last-child {
-  border-bottom: 0;
-}
-
-.post-item__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+.post-item:hover {
+  background: #fbfdff;
+  transform: translateY(-2px);
 }
 
 .post-item__title {
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: #111827;
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .post-item__summary {
   margin: 0;
-  color: #4b5563;
-  line-height: 1.55;
-  word-break: keep-all;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
-/* 키보드 접근성 포커스 스타일 */
-.post-item:focus {
-  outline: 3px solid rgba(31, 111, 235, 0.12);
-  outline-offset: 4px;
-  border-radius: 8px;
+/* Responsive */
+@media (max-width: 900px) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rocket-image {
+    width: min(360px, 60vw);
+  }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 520px) {
   .card-grid {
     grid-template-columns: 1fr;
+  }
+  .landing-section {
+    padding: 48px 16px 64px;
+  }
+  .brand-en {
+    font-size: clamp(2.4rem, 10vw, 3.6rem);
   }
 }
 </style>

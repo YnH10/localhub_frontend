@@ -179,6 +179,7 @@ import {
   fetchLocation,
   fetchWaterRocketIndex,
   resolveLocationIdByContentId,
+  resolveLocationByLocalItem,
 } from '@/services/locations'
 import {
   fetchComments,
@@ -191,6 +192,9 @@ import {
   fetchPreVisitEvaluations,
   fetchPostVisitEvaluations,
 } from '@/services/evaluations'
+
+// local dataset helper
+import { getTouristPlaceById } from '@/assets/data/touristPlaces'
 
 const route = useRoute()
 const router = useRouter()
@@ -289,12 +293,61 @@ const loadWaterRocketIndex = async () => {
 
 const resolveAndLoad = async () => {
   resolving.value = true
-  backendId.value = await resolveLocationIdByContentId(localContentId)
+  backendId.value = null
+
+  console.debug('[TouristDetail] resolving for route param:', localContentId)
+
+  // 1) If route param is numeric and fetchLocation returns data => use it directly
+  const numeric = Number(localContentId)
+  if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+    try {
+      const maybe = await fetchLocation(numeric, { _ts: Date.now() })
+      if (maybe && (maybe.id || maybe.content_id)) {
+        backendId.value = maybe.id ?? numeric
+        console.debug('[TouristDetail] used numeric route param as backend id:', backendId.value)
+      }
+    } catch (e) {
+      console.debug('[TouristDetail] numeric direct fetch failed', e?.message ?? e)
+    }
+  }
+
+  // 2) If not set, try resolveLocationIdByContentId (search + fallback)
+  if (!backendId.value) {
+    try {
+      const resolved = await resolveLocationIdByContentId(localContentId)
+      if (resolved) {
+        backendId.value = resolved
+        console.debug('[TouristDetail] resolved via resolveLocationIdByContentId:', backendId.value)
+      }
+    } catch (e) {
+      console.debug('[TouristDetail] resolveLocationIdByContentId error', e?.message ?? e)
+    }
+  }
+
+  // 3) If still not set, try resolve by local item heuristics (title/coords/local backendId)
+  if (!backendId.value) {
+    try {
+      const local = getTouristPlaceById(localContentId)
+      if (local && local.backendId) {
+        backendId.value = local.backendId
+        console.debug('[TouristDetail] matched via local dataset backendId:', backendId.value)
+      } else {
+        const resolvedLocal = await resolveLocationByLocalItem(local)
+        if (resolvedLocal) {
+          backendId.value = resolvedLocal
+          console.debug('[TouristDetail] resolved via resolveLocationByLocalItem:', backendId.value)
+        }
+      }
+    } catch (e) {
+      console.debug('[TouristDetail] resolve by local item failed', e?.message ?? e)
+    }
+  }
+
   resolving.value = false
+
   if (backendId.value) {
     await Promise.all([loadPlace(), loadComments(), loadWaterRocketIndex()])
   } else {
-    // optional: nothing to load
     place.value = null
     comments.value = []
     serverIndex.value = null
@@ -306,8 +359,7 @@ onMounted(() => {
 })
 
 watch(() => route.params.id, async () => {
-  // update localContentId reference is route.params.id; re-resolve backend id
-  await resolveAndLoad()
+  resolveAndLoad()
 })
 
 const waterRocketScore = computed(() => {
@@ -322,9 +374,7 @@ const formattedWaterRocketScore = computed(() => {
   return (waterRocketScore.value || 0).toFixed(1)
 })
 
-const previewScore = computed(() => {
-  return form.beforeScore - form.afterScore
-})
+const previewScore = computed(() => form.beforeScore - form.afterScore)
 
 const submitReview = async () => {
   if (!backendId.value) {
@@ -343,7 +393,6 @@ const submitReview = async () => {
 
   submitting.value = true
   try {
-    // 먼저 평가(별도 엔드포인트), 그 다음 댓글을 등록
     await createPreVisitEvaluation(backendId.value, {
       author: '익명',
       expectation_score: Number(form.beforeScore),
@@ -358,11 +407,9 @@ const submitReview = async () => {
       password: String(form.password),
     })
 
-    // 갱신
     await loadComments()
     await loadWaterRocketIndex()
 
-    // 리셋
     form.beforeScore = 5
     form.afterScore = 3
     form.comment = ''
@@ -403,5 +450,5 @@ const goBack = () => {
 </script>
 
 <style scoped>
-/* 기존 스타일 그대로 재사용 (필요시 로컬 스타일 보강) */
+/* 필요한 스타일(기존 파일의 스타일을 그대로 유지하세요) */
 </style>

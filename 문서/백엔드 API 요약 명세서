@@ -1,0 +1,202 @@
+# Trapvel Backend API — 요약 명세
+
+- **Base URL**: `https://trapvel-backent.fly.dev`
+- **OpenAPI (raw)**: `https://trapvel-backent.fly.dev/openapi.json`
+- **Auth**: 없음 (공개 API)
+- **Content-Type**: `application/json`
+
+---
+
+## 엔드포인트 요약 (전체)
+
+- **GET /locations**: 위치 목록 조회  
+  - **설명**: Read Locations  
+  - **쿼리 파라미터**:
+    - **page**: integer, optional, 최소 1, 기본값 1
+    - **size**: integer, optional, 최소 1, 최대 100, 기본값 20
+    - **region**: string|null, optional
+    - **cat1**: string|null, optional
+    - **keyword**: string|null, optional
+    - **sort**: string, optional, 패턴 `^(id|water_rocket_index)$`, 기본값 `id`
+  - **응답**:
+    - **200**: `LocationListResponse`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/water-rocket-extremes**: Water Rocket 지수 최고/최저 조회  
+  - **쿼리 파라미터**:
+    - **limit**: integer, optional, 최소 1, 최대 20, 기본값 3
+  - **응답**:
+    - **200**: `WaterRocketExtremesResponse`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/{location_id}**: 단일 위치 상세 조회  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **응답**:
+    - **200**: `LocationDetail`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/{location_id}/pre-visit-evaluations**: 해당 위치의 사전 평가 목록 조회  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **응답**:
+    - **200**: `PreVisitEvaluationOut[]`
+    - **422**: `HTTPValidationError`
+
+- **POST /locations/{location_id}/pre-visit-evaluations**: 사전 평가 생성  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **요청 본문**: `PreVisitEvaluationCreate` (application/json)
+  - **응답**:
+    - **201**: `PreVisitEvaluationOut`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/{location_id}/post-visit-evaluations**: 사후 평가 목록 조회  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **응답**:
+    - **200**: `PostVisitEvaluationOut[]`
+    - **422**: `HTTPValidationError`
+
+- **POST /locations/{location_id}/post-visit-evaluations**: 사후 평가 생성  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **요청 본문**: `PostVisitEvaluationCreate` (application/json)
+  - **응답**:
+    - **201**: `PostVisitEvaluationOut`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/{location_id}/water-rocket-index**: 특정 위치의 Water Rocket Index 조회  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **응답**:
+    - **200**: `WaterRocketIndexOut`
+    - **422**: `HTTPValidationError`
+
+- **GET /comments/recent**: 최근 댓글 조회  
+  - **쿼리 파라미터**:
+    - **limit**: integer, optional, 최소 1, 최대 50, 기본값 10
+  - **응답**:
+    - **200**: `CommentOut[]`
+    - **422**: `HTTPValidationError`
+
+- **GET /locations/{location_id}/comments**: 특정 위치의 댓글 목록 조회  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **응답**:
+    - **200**: `CommentOut[]`
+    - **422**: `HTTPValidationError`
+
+- **POST /locations/{location_id}/comments**: 댓글 생성  
+  - **경로 파라미터**:
+    - **location_id**: integer, required
+  - **요청 본문**: `CommentCreate` (application/json)
+  - **응답**:
+    - **201**: `CommentOut`
+    - **422**: `HTTPValidationError`
+
+- **DELETE /comments/{comment_id}**: 댓글 삭제  
+  - **경로 파라미터**:
+    - **comment_id**: integer, required
+  - **요청 본문**: `CommentDelete` (application/json, 요구됨) — 삭제용 4자리 비밀번호 포함
+  - **응답**:
+    - **204**: No Content
+    - **422**: `HTTPValidationError`
+
+- **GET /health**: 상태 확인 (헬스체크)  
+  - **응답**:
+    - **200**: 빈/간단한 JSON (서버가 정상 응답 중)
+
+---
+
+## 주요 스키마 요약 (프론트엔드에서 자주 참조할 필드)
+
+- **LocationListResponse**
+  - **total**: integer — 전체 개수 (required)
+  - **page**: integer — 현재 페이지 (required)
+  - **size**: integer — 페이지 사이즈 (required)
+  - **items**: `LocationSummary[]` (required)
+
+- **LocationSummary**
+  - **id**: integer (required)
+  - **content_id**: string (required)
+  - **title**: string (required)
+  - **region**: string|null
+  - **addr1**: string|null
+  - **firstimage**: string|null
+  - **cat1**: string|null
+  - **water_rocket_index**: number (required)
+  - **pre_visit_avg**: number (required)
+  - **post_visit_avg**: number (required)
+
+- **LocationDetail**
+  - 위 Summary 필드 포함 및 추가:
+  - **addr2**, **zipcode**, **tel**, **mapx**, **mapy**, **areacode**, **sigungucode**, **cat2**, **cat3**, **firstimage2**
+  - **pre_visit_count**, **post_visit_count**, **comment_count**: integer (기본값 0)
+  - **required**: `id`, `content_id`, `title`, `water_rocket_index`, `pre_visit_avg`, `post_visit_avg`
+
+- **PreVisitEvaluationCreate**
+  - **author**: string, 1~50 (required)
+  - **expectation_score**: integer (1..5) (required)
+
+- **PreVisitEvaluationOut**
+  - **id**, **location_id**, **author**, **expectation_score**, **created_at** (required)
+
+- **PostVisitEvaluationCreate**
+  - **author**: string, 1~50 (required)
+  - **satisfaction_score**: integer (1..5) (required)
+  - **revisit_intention**: boolean|null
+  - **visited_at**: date|null
+
+- **PostVisitEvaluationOut**
+  - **id**, **location_id**, **author**, **satisfaction_score**, **revisit_intention**, **visited_at**, **created_at** (required 일부 있음)
+
+- **CommentCreate**
+  - **author**: string, 1~50 (required)
+  - **content**: string, 1~2000 (required)
+  - **password**: string, pattern `^\d{4}$` (4자리 숫자, required)
+
+- **CommentDelete**
+  - **password**: string, pattern `^\d{4}$` (required)
+
+- **CommentOut**
+  - **id**, **location_id**, **author**, **content**, **created_at**, **updated_at** (updated_at은 null 허용)
+
+- **WaterRocketExtremesResponse**
+  - **highest**: `LocationSummary[]` (required)
+  - **lowest**: `LocationSummary[]` (required)
+
+- **WaterRocketIndexOut**
+  - **location_id**: integer (required)
+  - **pre_visit_avg**: number (required)
+  - **post_visit_avg**: number (required)
+  - **water_rocket_index**: number (required)
+
+- **ValidationError**
+  - **loc**: (string|integer)[] — 에러 위치
+  - **msg**: string — 에러 메시지
+  - **type**: string — 에러 타입
+
+- **HTTPValidationError**
+  - **detail**: `ValidationError[]`
+
+---
+
+## 프론트엔드 주의사항 (간결)
+- 모든 요청/응답은 JSON입니다. POST/DELETE 시 `Content-Type: application/json` 전송 필요.  
+- 경로 파라미터(`{location_id}`, `{comment_id}`)는 정수로 대체하세요.  
+- 댓글 삭제는 `DELETE /comments/{comment_id}`에 본문으로 비밀번호(`password`, 4자리 숫자)를 보냅니다.  
+- 유효성 오류는 **422**를 반환하고, 바디는 `HTTPValidationError`입니다. 프론트에서 에러 메시지 파싱 시 `detail` 배열을 확인하세요.  
+- 기본 API 호스트는 `https://trapvel-backent.fly.dev`입니다. (프록시/환경 따라 base URL을 분리해 관리하세요.)
+
+---
+
+## 검증/테스트 팁
+- 헬스체크: `GET /health` 응답(200)이 오면 서버가 응답 중임을 의미합니다.  
+- OpenAPI 원본: `GET /openapi.json`로 전체 스키마·엔드포인트를 그대로 확인할 수 있습니다.
+
+---
+
+## 다음 옵션
+- **원하면**: Vue 3 + axios용 간단한 서비스 파일 템플릿을 만들어 드립니다 (타입스크립트 포함 가능).  
+- **또는**: 특정 엔드포인트 하나를 골라 axios 예제 코드와 요청/응답 핸들링 가이드를 원하시나요?
