@@ -188,6 +188,8 @@ import {
 import {
   createPreVisitEvaluation,
   createPostVisitEvaluation,
+  fetchPreVisitEvaluations,
+  fetchPostVisitEvaluations,
 } from '@/services/evaluations'
 
 const route = useRoute()
@@ -255,8 +257,33 @@ const loadWaterRocketIndex = async () => {
     if (data == null) serverIndex.value = null
     else serverIndex.value = Number(data.score ?? data.value ?? data.water_rocket_index ?? data)
   } catch (err) {
-    console.error('loadWaterRocketIndex error', err)
-    serverIndex.value = null
+    console.warn('loadWaterRocketIndex error, trying fallback via evaluations', err)
+    try {
+      const [preList, postList] = await Promise.all([
+        fetchPreVisitEvaluations(backendId.value).catch(() => []),
+        fetchPostVisitEvaluations(backendId.value).catch(() => []),
+      ])
+      const avg = (arr, keyCandidates) => {
+        if (!arr || !arr.length) return null
+        const sum = arr.reduce((s, item) => {
+          for (const k of keyCandidates) {
+            if (item[k] !== undefined && item[k] !== null) return s + Number(item[k])
+          }
+          return s
+        }, 0)
+        return sum / arr.length
+      }
+      const preAvg = avg(preList, ['expectation_score'])
+      const postAvg = avg(postList, ['satisfaction_score'])
+      if (preAvg !== null && postAvg !== null) {
+        serverIndex.value = preAvg - postAvg
+      } else {
+        serverIndex.value = null
+      }
+    } catch (e) {
+      console.error('fallback water rocket calc failed', e)
+      serverIndex.value = null
+    }
   }
 }
 
@@ -317,8 +344,14 @@ const submitReview = async () => {
   submitting.value = true
   try {
     // 먼저 평가(별도 엔드포인트), 그 다음 댓글을 등록
-    await createPreVisitEvaluation(backendId.value, { score: Number(form.beforeScore) })
-    await createPostVisitEvaluation(backendId.value, { score: Number(form.afterScore) })
+    await createPreVisitEvaluation(backendId.value, {
+      author: '익명',
+      expectation_score: Number(form.beforeScore),
+    })
+    await createPostVisitEvaluation(backendId.value, {
+      author: '익명',
+      satisfaction_score: Number(form.afterScore),
+    })
     await createCommentApi(backendId.value, {
       author: '익명',
       content: text,
