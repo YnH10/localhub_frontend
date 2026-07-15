@@ -201,8 +201,10 @@ const recentPosts = [
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 12px;
   padding: 72px 20px 90px;
+  text-align: center;
 }
 
 /* 첫 문장: 보조 카피 */
@@ -263,7 +265,8 @@ const recentPosts = [
 .landing-visual {
   margin: 18px 0 10px;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
+  width: 100%;
 }
 
 .rocket-image {
@@ -271,7 +274,7 @@ const recentPosts = [
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 18px 28px rgba(31, 111, 235, 0.2));
-  transform: rotate(-8deg) translateX(-8px);
+  transform: rotate(-8deg);
 }
 
 /* 하단 문장 */
@@ -291,6 +294,7 @@ const recentPosts = [
 .cta-button {
   margin-top: 18px;
   width: fit-content;
+  align-self: center;
   border: 0;
   border-radius: 999px;
   background: #1f6feb;
